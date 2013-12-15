@@ -154,6 +154,10 @@ def get_documentlist_js(request):
 @login_required
 def editor(request):
     response = {}
+    if "ojsuser_" in request.user.username:
+        response["ojsuser"] = True
+    else :
+        response["ojsuser"] = False
     
     return render_to_response('document/editor.html', 
         response,

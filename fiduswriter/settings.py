@@ -159,6 +159,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.locale.LocaleMiddleware',
+    'ojs.middleware.OJSUserCheck'
 )
 
 # The location of the top urls.py file inside the fiduswriter folder. 
@@ -218,7 +219,8 @@ INSTALLED_APPS = (
     'allauth.socialaccount',
     'avatar',
     'compressor',
-    'beta'
+    'beta',
+    'ojs'
     # If you want to enable one or several of the social network login options 
     # below, make sure you add the authorization keys at:
     # http://SERVER.COM/admin/socialaccount/socialapp/
@@ -317,6 +319,10 @@ JS_LOCATIONS = {
 
 CSS_LOCATIONS = {
     }
+
+# Global variables for OJS application
+OJS_API_KEY = "apiKeyForOJS"
+OJS_USER_PASS = "passwordForOJSUser"
 
 try:
     exec open(os.path.join(PROJECT_PATH, 'configuration.py')) in globals()
