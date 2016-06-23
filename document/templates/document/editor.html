@@ -11,9 +11,9 @@
         <script type="text/javascript">
             var staticUrl = '{{ STATIC_URL }}';
             {% if WS_PORT %}
-                var websocketPort = {{WS_PORT}};
+                var websocketPort = ':'+{{WS_PORT}};
             {% else %}
-                var websocketPort = location.port.length>0?location.port:'80';
+                var websocketPort = location.port.length>0?':'+location.port:'';
             {% endif %}
             {% if WS_SERVER %}
                 var websocketServer = '{{ WS_SERVER }}';
@@ -76,8 +76,6 @@
 
         {% endcompress %}
 
-        <!-- loadCSS -->
-        <script type="text/javascript" src="{{ STATIC_URL }}js/libs/loadCSS-0.2.4.js"></script>
         <!-- jQuery -->
         <script type="text/javascript" src="{{ JQUERY_URL }}"></script>
         <!-- JS error handling -->
@@ -89,12 +87,8 @@
         <!-- citeproc -->
         <script type="text/javascript" src="{{ STATIC_URL }}js/libs/citeproc/xmldom.js"></script>
         <script type="text/javascript" src="{{ STATIC_URL }}js/libs/citeproc/citeproc.js"></script>
-        <script type="text/javascript" src="{{ STATIC_URL }}js/libs/jquery.autoresize.js"></script>
 
         {% compress js %}
-
-            <script type="text/javascript" src="{{ STATIC_URL }}js/common.js"></script>
-            <script type="text/javascript" src="{{ STATIC_URL }}js/menubase.js"></script>
             <!-- simplePagination.js -->
             <script type="text/javascript" src="{{ STATIC_URL }}js/libs/simplePagination.js"></script>
             <script type="text/javascript">
@@ -119,15 +113,8 @@
                     'flowTo': 'document.getElementById("print")'
                 };
             </script>
-            <script type="text/javascript">
-                // Prevent migrate messages. Currently only one message from hallo.js is being created.
-                jQuery.migrateMute = true;
-            </script>
-            <!-- Django form submission code -->
-            <script type="text/javascript" src="{{ STATIC_URL }}js/csrf.js"></script>
             <!-- jQuery tablesorter -->
             <script type="text/javascript" src="{{ STATIC_URL }}js/libs/jquery.dataTables.min.js"></script>
-            <script type="text/javascript" src="{{ STATIC_URL }}js/libs/jquery.ui.potato.menu.js"></script>
             <!-- Dropkick -->
             <script type="text/javascript" src="{{ STATIC_URL }}js/libs/jquery.dropkick-1.1.0.js"></script>
             <!-- Zip.js -->

@@ -66,7 +66,7 @@ export class Editor {
 
     startEditor() {
         let that = this
-        this.pm = this.makeEditor(document.getElementById('document-editable'))
+        this.makeEditor()
         this.currentPm = this.pm // The editor that is currently being edited in -- main or footnote editor
         new ModFootnotes(this)
         new ModCitations(this)
@@ -88,14 +88,14 @@ export class Editor {
     setSaveTimers() {
         let that = this
         // Set Auto-save to send the document every two minutes, if it has changed.
-        this.sendDocumentTimer = setInterval(function() {
+        this.sendDocumentTimer = window.setInterval(function() {
             if (that.docInfo && that.docInfo.changed && that.docInfo.rights !== 'read') {
                 that.save()
             }
         }, 120000)
 
         // Set Auto-save to send the title every 5 seconds, if it has changed.
-        this.sendDocumentTitleTimer = setInterval(function() {
+        this.sendDocumentTitleTimer = window.setInterval(function() {
             if (that.docInfo && that.docInfo.titleChanged && that.docInfo.rights !== 'read') {
                 that.docInfo.titleChanged = false
                 that.mod.serverCommunications.send({
@@ -106,17 +106,15 @@ export class Editor {
         }, 10000)
     }
 
-    makeEditor(where) {
-        let pm = new ProseMirror({
-            place: where,
+    makeEditor() {
+        this.pm = new ProseMirror({
+            place: document.getElementById('document-editable'),
             schema: this.schema,
             //    menuBar: true,
             collab: {
                 version: 0
             }
         })
-        pm.editor = this
-        return pm
     }
 
     createDoc(aDocument) {
@@ -366,12 +364,12 @@ export class Editor {
         let outputNode = this.mod.nodeConvert.editorToModelNode(serializeTo(this.pm.mod.collab.versionDoc, 'dom'))
         this.doc.title = this.pm.mod.collab.versionDoc.firstChild.textContent
         this.doc.version = this.pm.mod.collab.version
-        this.doc.metadata.title = node2Obj(outputNode.getElementById('document-title'))
-        this.doc.metadata.subtitle = node2Obj(outputNode.getElementById('metadata-subtitle'))
-        this.doc.metadata.authors = node2Obj(outputNode.getElementById('metadata-authors'))
-        this.doc.metadata.abstract = node2Obj(outputNode.getElementById('metadata-abstract'))
-        this.doc.metadata.keywords = node2Obj(outputNode.getElementById('metadata-keywords'))
-        this.doc.contents = node2Obj(outputNode.getElementById('document-contents'))
+        this.doc.metadata.title = node2Obj(outputNode.querySelector('#document-title'))
+        this.doc.metadata.subtitle = node2Obj(outputNode.querySelector('#metadata-subtitle'))
+        this.doc.metadata.authors = node2Obj(outputNode.querySelector('#metadata-authors'))
+        this.doc.metadata.abstract = node2Obj(outputNode.querySelector('#metadata-abstract'))
+        this.doc.metadata.keywords = node2Obj(outputNode.querySelector('#metadata-keywords'))
+        this.doc.contents = node2Obj(outputNode.querySelector('#document-contents'))
         this.doc.hash = this.getHash()
         this.doc.comments = this.mod.comments.store.comments
         if (callback) {
@@ -446,8 +444,8 @@ export class Editor {
 
                     })
                 }
-
-                if (that.pm.doc.resolve(step.from).node(1).type.name === 'title') {
+                let docPart = that.pm.doc.resolve(step.from).node(1)
+                if (docPart && docPart.type.name === 'title') {
                     updateTitle = true
                 }
             }

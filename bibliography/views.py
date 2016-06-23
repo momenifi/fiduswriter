@@ -57,7 +57,9 @@ def save_bib_to_db(inserting_obj, suffix):
             inserting_obj['entry_key'] = new_entry_key
             return save_bib_to_db(inserting_obj, new_suffix)
         else:
-            return False
+            # At least one similar entry exists. Return the first match.
+            # This is important for BibTranslationTable on doc import
+            return similar[0]
 
 # bibtex file import
 
@@ -136,8 +138,6 @@ def import_bibtex_js(request):
                     # restore date value like "date"
                     bib_date = BibDate(val)
                     val = bib_date.date
-                if isinstance(val, basestring):
-                    val = val.strip("{}")
                 if isinstance(val, list):
                     val = ' and '.join(val)
                 the_fields[field_type.field_name] = val

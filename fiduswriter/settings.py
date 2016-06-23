@@ -20,10 +20,14 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
+# The top path of the project. The default is for it to point to the directory
+# above this file.
+PROJECT_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': './fiduswriter.sql',
+        'NAME': os.path.join(PROJECT_PATH, 'fiduswriter.sql'),
         'CONN_MAX_AGE': 15
     }
 
@@ -60,7 +64,7 @@ SITE_ID = 1
 USE_I18N = True
 
 LOCALE_PATHS = (
-    './locale',
+    os.path.join(PROJECT_PATH, 'locale'),
 )
 
 # A list of allowed hostnames of this Fidus Writer installation
@@ -74,10 +78,6 @@ USE_L10N = True
 
 # If you set this to False, the server will not use timezone-aware datetimes.
 USE_TZ = True
-
-# The top path of the project. The default is for it to point to the directory
-# above this file.
-PROJECT_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # The default is the media folder in the directory above this file.
@@ -144,7 +144,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            './templates',
+            os.path.join(PROJECT_PATH, 'templates'),
             # Put strings here, like "/home/html/django_templates".
             # You only need to change this in very advanced setups.
         ],
@@ -231,6 +231,7 @@ LANGUAGES = (
     ('en', gettext('English')),
     ('bg', gettext('Bulgarian')),
     ('de', gettext('German')),
+    ('fr', gettext('French')),
     ('it', gettext('Italian')),
     ('es', gettext('Spanish')),
 )
@@ -279,12 +280,19 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
+        'null': {
+            'class': 'logging.NullHandler',
+        },
     },
     'loggers': {
         'django.request': {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': True,
+        },
+        'django.security.DisallowedHost': {
+            'handlers': ['null'],
+            'propagate': False,
         },
         'javascript_error': {
             'handlers': ['mail_admins'],

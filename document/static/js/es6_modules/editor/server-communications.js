@@ -33,10 +33,10 @@ export class ModServerCommunications {
 
     createWSConnection() {
         let that = this
+        let websocketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 
         try {
-            this.ws = new window.WebSocket('ws://' + window.websocketServer + ':' + window.websocketPort +
-                '/ws/doc/' + this.docId)
+            this.ws = new window.WebSocket(`${websocketProtocol}//${websocketServer}${websocketPort}/ws/doc/${this.docId}`)
             this.ws.onopen = function() {
                 console.log('connection open')
                 jQuery('#unobtrusive_messages').html('')
@@ -52,14 +52,19 @@ export class ModServerCommunications {
         }
         this.ws.onclose = function(event) {
             that.connected = false
-            clearInterval(that.wsPinger)
-            setTimeout(function() {
+            window.clearInterval(that.wsPinger)
+            window.setTimeout(function() {
                 that.createWSConnection()
             }, 2000)
             console.log('attempting to reconnect')
-            jQuery('#unobtrusive_messages').html(gettext('Disconnected. Attempting to reconnect...'))
+            if (that.editor.pm.mod.collab.hasSendableSteps()) {
+                jQuery('#unobtrusive_messages').html('<span class="warn">'+gettext('Warning! Not all your changes have been saved! You could suffer data loss. Attempting to reconnect...')+'</span>')
+            } else {
+                jQuery('#unobtrusive_messages').html(gettext('Disconnected. Attempting to reconnect...'))
+            }
+
         }
-        this.wsPinger = setInterval(function() {
+        this.wsPinger = window.setInterval(function() {
             that.send({
                 'type': 'ping'
             })
@@ -137,8 +142,5 @@ export class ModServerCommunications {
                 break
         }
     }
-
-
-
 
 }

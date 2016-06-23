@@ -31,10 +31,20 @@
                 <option value="bg"{% if 'bg' == LANGUAGE_CODE %}{{ 'selected' }}{% endif %}>Български</option>
                 <option value="de"{% if 'de' == LANGUAGE_CODE %}{{ 'selected' }}{% endif %}>Deutsch</option>
                 <option value="en"{% if 'en' == LANGUAGE_CODE %}{{ 'selected' }}{% endif %}>English</option>
-                <option value="es"{% if 'es' == LANGUAGE_CODE %}{{ 'selected' }}{% endif %}>Espa&ntilde;ol</option>
+                <option value="es"{% if 'es' == LANGUAGE_CODE %}{{ 'selected' }}{% endif %}>Español</option>
+                <option value="fr"{% if 'fr' == LANGUAGE_CODE %}{{ 'selected' }}{% endif %}>Français</option>
                 <option value="it"{% if 'it' == LANGUAGE_CODE %}{{ 'selected' }}{% endif %}>Italiano</option>
             </select>
         </form>
+        <div id="cookie-notification">
+            {% blocktrans %}
+            Fidus Writer saves small pieces of text information (cookies) on your device
+            in order to deliver better content and for statistical purposes. You
+            can disable the usage of cookies by changing the settings of your browser.
+            By browsing our website without changing the browser settings you grant
+            us permission to store that information on your device.
+            {% endblocktrans %}
+        </div>
     </div>
 </footer>
 <script>

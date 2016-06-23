@@ -6,10 +6,13 @@ import {BibliographyDB} from "../database"
 import {BibEntryTypes} from "../statics"
 import {BibLatexImporter} from "../importer/biblatex"
 import {BibLatexExporter} from "../exporter/biblatex"
+import {addDropdownBox} from "../../common/common"
+import {Menu} from "../../menu/menu"
 
 export class BibliographyOverview {
 
     constructor() {
+        new Menu("bibliography")
         this.getBibDB()
         this.bind()
     }
@@ -187,16 +190,19 @@ export class BibliographyOverview {
         bibauthor += andOthers
         // If title is undefined, set it to an empty string.
         // TODO: Such entries should likely not be accepted by the importer.
-        if (typeof bibInfo.title === 'undefined') bibInfo.title = ''
-
+        let bibtitle = typeof bibInfo.title === 'undefined' ? '' : bibInfo.title
+        // Hide most latex commands TODO: Remove when exchanging bibtex parser
+        bibtitle = bibtitle.replace(/\\(?:[^a-zA-Z]|[a-zA-Z]+[*=']?)/g,'')
+        bibtitle = bibtitle.replace(/[{}]/g, '')
 
         if (0 < $tr.size()) { //if the entry exists, update
+
             $tr.replaceWith(bibtableTemplate({
                 'id': pk,
                 'cats': bibInfo.entry_cat.split(','),
                 'type': bibInfo.entry_type,
                 'typetitle': BibEntryTypes[bibInfo.entry_type]['title'],
-                'title': bibInfo.title.replace(/[{}]/g, ''),
+                'title': bibtitle,
                 'author': bibauthor,
                 'published': formatDateString(bibInfo.date)
             }))
@@ -206,7 +212,7 @@ export class BibliographyOverview {
                 'cats': bibInfo.entry_cat.split(','),
                 'type': bibInfo.entry_type,
                 'typetitle': BibEntryTypes[bibInfo.entry_type]['title'],
-                'title': bibInfo.title.replace(/[{}]/g, ''),
+                'title': bibtitle,
                 'author': bibauthor,
                 'published': formatDateString(bibInfo.date)
             }))
@@ -290,7 +296,7 @@ export class BibliographyOverview {
         })
 
         //open dropdown for bib category
-        $.addDropdownBox(jQuery('#bib-category-btn'), jQuery('#bib-category-pulldown'))
+        addDropdownBox(jQuery('#bib-category-btn'), jQuery('#bib-category-pulldown'))
         jQuery(document).on('mousedown', '#bib-category-pulldown li > span', function () {
             jQuery('#bib-category-btn > label').html(jQuery(this).html())
             jQuery('#bib-category').val(jQuery(this).attr('data-id'))
@@ -319,7 +325,7 @@ export class BibliographyOverview {
         })
 
         //open dropdown for selecting action
-        $.addDropdownBox(jQuery('#select-action-dropdown'), jQuery('#action-selection-pulldown'))
+        addDropdownBox(jQuery('#select-action-dropdown'), jQuery('#action-selection-pulldown'))
 
         //import a bib file
         jQuery('.import-bib').bind('click', function () {

@@ -1,13 +1,14 @@
 import {getMissingDocumentListData} from "../../documents/tools"
 import {BibliographyDB} from "../../bibliography/database"
 import {ImageDB} from "../../images/database"
+import {addAlert} from "../../common/common"
 
 export let getMissingChapterData = function (aBook, documentList, callback) {
     let bookDocuments = []
 
     for (let i = 0; i < aBook.chapters.length; i++) {
         if (!_.findWhere(documentList, {id: aBook.chapters[i].text})) {
-            $.addAlert('error', "Cannot produce book as you lack access rights to its chapters.")
+            addAlert('error', "Cannot produce book as you lack access rights to its chapters.")
             return
         }
         bookDocuments.push(aBook.chapters[i].text)
@@ -25,11 +26,10 @@ export let getImageAndBibDB = function (aBook, documentList, callback) {
 
     documentOwners = _.unique(documentOwners).join(',')
     let imageGetter = new ImageDB(documentOwners)
-    imageGetter.getDB(function (anImageDB) {
+    imageGetter.getDB(function () {
         let bibGetter = new BibliographyDB(documentOwners, false, false, false)
-        bibGetter.getBibDB(function (
-            bibDB, bibCats) {
-            callback(anImageDB, bibDB)
+        bibGetter.getBibDB(function () {
+            callback(imageGetter.db, bibGetter.bibDB)
         })
     })
 }

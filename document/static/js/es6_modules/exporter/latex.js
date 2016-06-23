@@ -4,6 +4,8 @@ import {zipFileCreator} from "./zip"
 import {BaseExporter} from "./base"
 import {BibLatexExporter} from "../bibliography/exporter/biblatex"
 import {BibliographyDB} from "../bibliography/database"
+import {addAlert} from "../common/common"
+
 
 export class BaseLatexExporter extends BaseExporter {
 
@@ -142,11 +144,6 @@ export class BaseLatexExporter extends BaseExporter {
         if (!listedWorksList) {
             listedWorksList = []
         }
-
-        // Remove sections that are marked as deleted
-        /*jQuery(htmlCode).find('.del').each(function() {
-            this.outerHTML = ''
-        })*/
 
 
         if (isChapter) {
@@ -304,7 +301,6 @@ export class BaseLatexExporter extends BaseExporter {
                     citationCommand += '{'
 
                     citationCommand += that.bibDB[citationEntry].entry_key
-
                     if (listedWorksList.indexOf(citationEntry) === -1) {
                         listedWorksList.push(citationEntry)
                     }
@@ -387,9 +383,6 @@ export class BaseLatexExporter extends BaseExporter {
             }
         })
 
-        /*jQuery(htmlCode).find('.footnote').each(function() {
-            jQuery(this).replaceWith('\\footnotext{' + this.innerHTML + '}')
-        })*/
 
         /* Add LaTeX that will appear after the abstract, if there is an
          * abstract. Otherwise at start of document.
@@ -414,7 +407,7 @@ export class BaseLatexExporter extends BaseExporter {
         } else {
             let bibExport = new BibLatexExporter(
                 listedWorksList, that.bibDB, false)
-            returnObject.bibtex = bibExport.bibtex_str
+            returnObject.bibtex = bibExport.bibtexStr
         }
         return returnObject
     }
@@ -442,7 +435,7 @@ export class LatexExporter extends BaseLatexExporter {
     exportOne() {
         let title = this.doc.title
 
-        $.addAlert('info', title + ': ' + gettext(
+        addAlert('info', title + ': ' + gettext(
             'Latex export has been initiated.'))
 
         let contents = document.createElement('div')

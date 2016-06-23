@@ -1,9 +1,13 @@
 import {teammemberTemplate} from "./templates"
 import {addMemberDialog, deleteMemberDialog} from "./manage"
+import {addDropdownBox} from "../common/common"
+import {Menu} from "../menu/menu"
 
 export let contactsOverview = function () {
 
     jQuery(document).ready(function() {
+        new Menu("") // Nothing highlighted.
+
         //intialize the teammember table
         jQuery('#team-table tbody').append(teammemberTemplate({'members': window.teammembers}))
 
@@ -27,7 +31,7 @@ export let contactsOverview = function () {
             })
         })
 
-        $.addDropdownBox(jQuery('#select-action-dropdown'), jQuery('#action-selection-pulldown'))
+        addDropdownBox(jQuery('#select-action-dropdown'), jQuery('#action-selection-pulldown'))
         jQuery('#action-selection-pulldown span').bind('mousedown', function() {
             let ids = [], action_name = jQuery(this).attr('data-action')
             if('' === action_name || 'undefined' == typeof(action_name))

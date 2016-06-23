@@ -1,6 +1,6 @@
 import {configureCitationTemplate, citationItemTemplate, selectedCitationTemplate} from "./templates"
 import {BibEntryForm} from "../../../bibliography/form/form"
-
+import {addDropdownBox, setCheckableLabel} from "../../../common/common"
 
 // TODO: turn into class (like FigureDialog)
 export let citationDialog = function (mod) {
@@ -43,7 +43,7 @@ export let citationDialog = function (mod) {
             emptySpaceNode
 
         if (0 === cite_items.size()) {
-            alert(gettext('Please select at least one citation source!'))
+            window.alert(gettext('Please select at least one citation source!'))
             return false
         }
 
@@ -76,7 +76,8 @@ export let citationDialog = function (mod) {
                 'author': bib.author || bib.editor || ''
             },
             cited_id
-
+        // Hide most latex commands TODO: Remove when exchanging bibtex parser 
+        bibEntry.title = bibEntry.title.replace(/\\(?:[^a-zA-Z]|[a-zA-Z]+[*=']?)/g,'')
         bibEntry.title = bibEntry.title.replace(/[{}]/g, '')
         bibEntry.author = bibEntry.author.replace(/[{}]/g, '')
         citableItemsHTML += citationItemTemplate(bibEntry)
@@ -92,13 +93,13 @@ export let citationDialog = function (mod) {
     diaButtons.push({
         text: gettext('Register new source'),
         click: function() {
-            new BibEntryForm(false, false, editor.bibDB.bibDB, editor.bibDB.bibCats, editor.doc.owner.id,
+            new BibEntryForm(false, '', editor.bibDB.bibDB, editor.bibDB.bibCats, editor.doc.owner.id,
                     function(bibEntryData){
                 editor.bibDB.createBibEntry(bibEntryData, function(newBibPks) {
                     editor.mod.menus.citation.appendManyToCitationDialog(newBibPks)
                     jQuery('.fw-checkable').unbind('click')
                     jQuery('.fw-checkable').bind('click', function() {
-                        $.setCheckableLabel($(this))
+                        setCheckableLabel(jQuery(this))
                     })
                 })
             })
@@ -190,7 +191,7 @@ export let citationDialog = function (mod) {
 
             jQuery('#cite-source-table').trigger('update')
 
-            $.addDropdownBox(jQuery('#citation-style-label'), jQuery('#citation-style-pulldown'))
+            addDropdownBox(jQuery('#citation-style-label'), jQuery('#citation-style-pulldown'))
             jQuery('#citation-style-pulldown .fw-pulldown-item').bind('mousedown', function() {
                 jQuery('#citation-style-label label').html(jQuery(this).html())
                 jQuery('#citation-style-label').attr('data-style', jQuery(this).data('style'))
@@ -229,7 +230,7 @@ export let citationDialog = function (mod) {
     jQuery('input').blur()
 
     jQuery('.fw-checkable').bind('click', function() {
-        $.setCheckableLabel($(this))
+        setCheckableLabel(jQuery(this))
     })
 
 }

@@ -3,6 +3,7 @@ import {createSlug, findImages} from "./tools"
 import {zipFileCreator} from "./zip"
 import {BibliographyDB} from "../bibliography/database"
 import {ImageDB} from "../images/database"
+import {addAlert} from "../common/common"
 
 /** The current Fidus Writer filetype version.
  * The importer will not import from a different version and the exporter
@@ -41,8 +42,8 @@ export class NativeExporter {
         let that = this
         if (!this.bibDB) {
             let bibGetter = new BibliographyDB(this.doc.owner.id, false, false, false)
-            bibGetter.getBibDB(function(bibDB, bibCats) {
-                that.bibDB = bibDB
+            bibGetter.getBibDB(function() {
+                that.bibDB = bibGetter.bibDB
                 callback()
             })
         } else {
@@ -69,7 +70,7 @@ export let exportNative = function(aDocument, anImageDB, aBibDB, callback) {
     let shrunkBibDB = {},
         citeList = []
 
-    $.addAlert('info', gettext('File export has been initiated.'))
+    addAlert('info', gettext('File export has been initiated.'))
 
     let contents = obj2Node(aDocument.contents)
 
@@ -86,6 +87,7 @@ export let exportNative = function(aDocument, anImageDB, aBibDB, callback) {
         citeList.push(jQuery(this).attr('data-bib-entry'))
     })
 
+
     citeList = _.uniq(citeList.join(',').split(','))
 
     // If the number of cited items is 1 and that one item is an empty string,
@@ -93,6 +95,9 @@ export let exportNative = function(aDocument, anImageDB, aBibDB, callback) {
     if (citeList.length === 1 && citeList[0] === '') {
         citeList = []
     }
+
+    // Entries are stored as integers
+    citeList = citeList.map(window.Number)
 
     for (let i in citeList) {
         shrunkBibDB[citeList[i]] = aBibDB[citeList[i]]
