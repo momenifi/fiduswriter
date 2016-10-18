@@ -13,9 +13,21 @@ SERVER_INFO = {
     # This determines whether the server is used for testing and will let the
     # users know upon signup know that their documents may disappear.
     'TEST_SERVER': True,
+    # This determines whether experimental or unfinished features will be
+    # enabled.
+    'EXPERIMENTAL': False,
     # This is the contact email that will be shown in various places all over
     # the site.
     'CONTACT_EMAIL': 'mail@email.com',
+    # If the FW instance is connected to an Open Journal System's instance,
+    # add the url here.
+    'OJS_URL': False,
+    # An app key for OJS to connect with. Change it to a secret value.
+    'OJS_KEY': 'S5cr4T',
+    # A standard password for accounts made automatically by OJS.
+    'OJS_PASSWORD': 'p4$$w04D',  # TODO: get rid of this!
+    # If websockets is running on a non-standard port, add it here:
+    'WS_PORT': False,
 }
 
 ADMINS = (
@@ -71,20 +83,20 @@ VISIBILITY = {
                'editor': ['always']}
 }
 
-INSTALLED_APPS += (
-    # If you want to enable one or several of the social network login options
-    # below, make sure you add the authorization keys at:
-    # http://SERVER.COM/admin/socialaccount/socialapp/
-    # 'allauth.socialaccount.providers.facebook',
-    # 'allauth.socialaccount.providers.google',
-    # 'allauth.socialaccount.providers.twitter',
-    # 'allauth.socialaccount.providers.github',
-    # 'allauth.socialaccount.providers.linkedin',
-    # 'allauth.socialaccount.providers.openid',
-    # 'allauth.socialaccount.providers.persona',
-    # 'allauth.socialaccount.providers.soundcloud',
-    # 'allauth.socialaccount.providers.stackexchange',
-)
+# INSTALLED_APPS += (
+#    If you want to enable one or several of the social network login options
+#    below, make sure you add the authorization keys at:
+#    http://SERVER.COM/admin/socialaccount/socialapp/
+#    'allauth.socialaccount.providers.facebook',
+#    'allauth.socialaccount.providers.google',
+#    'allauth.socialaccount.providers.twitter',
+#    'allauth.socialaccount.providers.github',
+#    'allauth.socialaccount.providers.linkedin',
+#    'allauth.socialaccount.providers.openid',
+#    'allauth.socialaccount.providers.persona',
+#    'allauth.socialaccount.providers.soundcloud',
+#    'allauth.socialaccount.providers.stackexchange',
+# )
 
 # A list of allowed hostnames of this Fidus Writer installation
 ALLOWED_HOSTS = [

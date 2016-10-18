@@ -7,7 +7,7 @@ Fidus Writer is an online collaborative editor especially made for academics who
 Contributing
 ----
 
-[![Coverage Status](https://coveralls.io/repos/github/fiduswriter/fiduswriter/badge.svg?branch=3.0)](https://coveralls.io/github/fiduswriter/fiduswriter?branch=3.0)
+[![Coverage Status](https://coveralls.io/repos/github/fiduswriter/fiduswriter/badge.svg?branch=3.1)](https://coveralls.io/github/fiduswriter/fiduswriter?branch=3.1)
 
 [![Bountysource](https://www.bountysource.com/badge/tracker?tracker_id=328497)](https://www.bountysource.com/trackers/328497-fiduswriter?utm_source=328497&utm_medium=shield&utm_campaign=TRACKER_BADGE)
 
@@ -137,18 +137,26 @@ Advanced options
 
 ### Development/upgrade:
 
-  If there are changes to the JavaScript source code of Fidus Writer, you need to run:
+  1. Before upgrading, update all your documents to the latest document version. An administrator needs to navigate to `/document/maintenance/` on your server using a browser.
+
+  2. Download the updated sources. If you have installed Fidus Writer from github and the upgrade is minor, the command will likely be:
+
+    > `git pull`
+
+  3. If there are changes to the JavaScript source code of Fidus Writer, you need to run:
 
   > `./manage.py transpile`
 
-  If there are changes to translations, you need to run:
+  4. If there are changes to translations, you need to run:
 
   > `./manage.py compilemessages`
 
-  If there are changes to the database models, you need to run:
+  5. If there are changes to the database models, you need to run:
 
   > `./manage.py migrate`
 
-  On a production server additionally:
+  6. On a production server additionally:
 
   > `./manage.py collectstatic`  
+
+  7. Update all the documents again to the latest document version. An administrator needs to navigate to `/document/maintenance/` on your server using a browser.

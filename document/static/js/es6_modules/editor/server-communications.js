@@ -95,7 +95,7 @@ export class ModServerCommunications {
             case 'welcome':
                 this.activateConnection()
                 break
-            case 'document_data':
+            case 'doc_data':
                 this.editor.receiveDocument(data)
                 break
             case 'confirm_diff_version':
@@ -125,6 +125,9 @@ export class ModServerCommunications {
                 break
             case 'check_hash':
                 this.editor.mod.collab.docChanges.checkHash(data.diff_version, data.hash)
+                break
+            case 'access_denied':
+                window.location.href = '/'
                 break
         }
     }

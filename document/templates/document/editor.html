@@ -5,11 +5,16 @@
     <head>
         <meta charset="utf-8" />
         <link rel="shortcut icon" href="{{ STATIC_URL }}img/favicon.png" type="image/png">
-        <title> Fidus Writer - {{document.title}} </title>
+        <title> Fidus Writer </title>
         <meta name="description" content="{% trans "The all in one solution for collaborative academic writing." %}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script type="text/javascript">
             var staticUrl = '{{ STATIC_URL }}';
+            {% if OJS_URL %}
+                var ojsUrl = '{{ OJS_URL }}';
+            {% else %}
+                var ojsUrl = false;
+            {% endif %}
             {% if WS_PORT %}
                 var websocketPort = ':'+{{WS_PORT}};
             {% else %}
@@ -49,7 +54,6 @@
             <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/fw-modules/document-menu.css" />
             <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/fw-modules/document-table.css" />
             <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/fw-modules/dialog-table.css" />
-            <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/fw-modules/dropkick.css" />
             <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/fw-modules/ui-tabs.css" />
             <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/fw-modules/add-remove-dialog.css" />
             <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/fw-modules/figure.css" />
@@ -84,16 +88,19 @@
         <script type="text/javascript" src="{{ JQUERYUI_URL }}"></script>
         <!-- Underscore -->
         <script type="text/javascript" src="{{ UNDERSCOREJS_URL }}"></script>
-        <!-- citeproc -->
-        <script type="text/javascript" src="{{ STATIC_URL }}js/libs/citeproc/xmldom.js"></script>
-        <script type="text/javascript" src="{{ STATIC_URL }}js/libs/citeproc/citeproc.js"></script>
+
         <!-- jQuery tablesorter -->
         <script type="text/javascript" src="{{ DATATABLES_URL }}"></script>
         <!-- Dropkick JS -->
-        <script type="text/javascript" src="{{ DROPKICKJS_URL }}"></script>
-        <!-- Editor  -->
-        <script type="text/javascript" src="{{ STATIC_URL }}js/editor.es5.js"></script>
-
+        <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/libs/dropkick.css" />
+        <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/fw-modules/dropkick.css" />
+        <script type="text/javascript" src="{{ STATIC_URL }}js/libs/dropkick.min.js"></script>
+        {% compress js %}
+            <!-- citeproc -->
+            <script type="text/javascript" src="{{ CITEPROC_URL }}"></script>
+            <!-- Editor  -->
+            <script type="text/javascript" src="{{ STATIC_URL }}js/editor.es5.js"></script>
+        {% endcompress %}
     </head>
     <body class="{% trans "en" %} tex2jax_ignore">
         <div id="editor">
@@ -124,11 +131,13 @@
                                 <span class="fw-pulldown-item download icon-download" title="{% trans "Download the current document" %}"> {% trans "Download" %} </span>
                             </li>
                             <li>
-                                <span class="fw-pulldown-item print icon-print" title="{% trans "Either print or create a PDF using your browser's print dialog" %}"> {% trans "Print/PDF" %} </span>
+                                <span class="fw-pulldown-item print icon-print" title="{% trans "Either print or create a PDF using your browser print dialog" %}"> {% trans "Print/PDF" %} </span>
                             </li>
-							<li> 
-                                <span class="fw-pulldown-item submitOjs icon-search" title="{% trans "submit the paper to ojs" %}"> {% trans "Submit paper" %} </span>
-                            </li>
+                            {% if EXPERIMENTAL and OJS_URL %}
+                                <li>
+                                    <span class="fw-pulldown-item submit-ojs icon-search" title="{% trans "submit the paper to ojs" %}"> {% trans "Submit paper" %} </span>
+                                </li>
+                            {% endif %}
                         </ul>
                     </div>
                 </div>
@@ -151,6 +160,15 @@
                                     LaTeX
                                 </span>
                             </li>
+                            {% if EXPERIMENTAL %}
+                                {% for export_template in export_templates %}
+                                    <li>
+                                        <span class="fw-pulldown-item template-export" data-filetype="{{ export_template.file_type }}" data-template="{{ export_template.template_file.url }}" title="{% trans "Export the document to a template:" %} {{ export_template.file_name }} ({{ export_template.file_type }})">
+                                            {{ export_template.file_name }} ({{ export_template.file_type }})
+                                        </span>
+                                    </li>
+                                {% endfor %}
+                            {% endif %}
                         </ul>
                     </div>
                 </div>
@@ -347,12 +365,27 @@
                         </button>
                     </div>
                     <div class="toolbarfigure ui-buttonset">
-                        <button class="fw-button fw-light fw-large fw-square edit-button"  id="button-figure" title="{% trans "Figure" %}">
+                        <button class="fw-button fw-light fw-large fw-square edit-button" id="button-figure" title="{% trans "Figure" %}">
                             <span class="ui-button-text">
                                 <i class="icon-figure"></i>
                             </span>
                         </button>
                     </div>
+                    {% if EXPERIMENTAL %}
+                        <div class="toolbartable ui-buttonset">
+                            <div id="button-table" class="toolbartable ui-buttonset">
+                                <span class="multibuttonsCover fw-button fw-light fw-large fw-square edit-button" title="{% trans "table" %}" id="block-style-label">
+                                    <span class="ui-button-text">
+                                        <i class="icon-table"></i>
+                                    </span>
+                                </span>
+                                <div class="fw-pulldown fw-left" style="display: none;">
+                                    <ul id="table-dialog">
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                     <div class="toolbarundoredo ui-buttonset">
                         <button class="fw-button fw-light fw-large fw-square disabled"  id="button-undo" title="{% trans "Undo" %}">
                             <span class="ui-button-text">
@@ -372,57 +405,6 @@
                             <span class="ui-button-text">
                                 <i class="icon-comment-empty"></i>
                             </span>
-                        </button>
-                    </div>
- 		    <div id="tableEdit" class="toolbartable ui-buttonset "style ="display:none">
-                        <span class="multibuttonsCover fw-button fw-light fw-large fw-square edit-button" 
-		title="{% trans "table editing." %}" id="block-style-label">{% trans "T" %}</span>
-                        <div class="fw-pulldown fw-left" style="display: none;">
-                            <ul>
-                                <li class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false">
-                                    <span class="ui-button-text" title="{% trans "insert row after." %}">
-                                        <input type="radio" >
-                                        <label class="fw-pulldown-item" id="row_after">{% trans "insert row after" %}</label>
-                                    </span>
-                                </li>
-				<li class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false">
-                                    <span class="ui-button-text" title="{% trans "insert row above." %}">
-                                        <input type="radio" >
-                                        <label class="fw-pulldown-item" id="row_before">{% trans "insert row before" %}</label>
-                                    </span>
-                                </li>
-<li class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false">
-                                    <span class="ui-button-text" title="{% trans "insert col right." %}">
-                                        <input type="radio" >
-                                        <label class="fw-pulldown-item" id="col_after">{% trans "insert column after" %}</label>
-                                    </span>
-                                </li>
-<li class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false">
-                                    <span class="ui-button-text" title="{% trans "insert col left." %}">
-                                        <input type="radio" >
-                                        <label class="fw-pulldown-item" id="col_before">{% trans "insert column before" %}</label>
-                                    </span>
-                                </li>
-<li class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false">
-                                    <span class="ui-button-text" title="{% trans "remove current column." %}">
-                                        <input type="radio" >
-                                        <label class="fw-pulldown-item" id="col_remove">{% trans "remove column" %}</label>
-                                    </span>
-                                </li>
-<li class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false">
-                                    <span class="ui-button-text" title="{% trans "remove current row." %}">
-                                        <input type="radio" >
-                                        <label class="fw-pulldown-item" id="row_remove">{% trans "remove row" %}</label>
-                                    </span>
-                                </li>
-                           </ul>
-                        </div>
-                     </div>
-                    <div class="toolbartable toolbaritalic ui-buttonset">
-                        <button class="fw-button fw-light fw-large edit-button"   id="button-table" title="{% trans "Table" %}">
-                                  <span class="ui-button-text">
-                            <label>{% trans "Insert Table" %}</label>
-                            </span>                              
                         </button>
                     </div>
                     <div id="comments-display" class="fw-button fw-light fw-large comment-only" title="{% trans "Show/hide comments" %}">

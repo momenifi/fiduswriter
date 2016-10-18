@@ -36,7 +36,8 @@ export class ModCommentStore {
                 this.mod.editor.pm.selection.from,
                 this.mod.editor.pm.selection.to,
                 {className: 'active-comment'}
-            )
+            ),
+            inDOM: false
         }
     }
 
@@ -149,12 +150,14 @@ export class ModCommentStore {
 
 
     addLocalAnswer(id, answer, local) {
+
         if (this.comments[id]) {
             if (!this.comments[id].answers) {
                 this.comments[id].answers = []
             }
             this.comments[id].answers.push(answer)
         }
+
         if (local || (!this.mod.layout.isCurrentlyEditing())) {
             this.mod.layout.layoutComments()
         }
@@ -304,8 +307,8 @@ export class ModCommentStore {
                 this.updateLocalComment(event.id, event.comment, event['review:isMajor'], false)
             } else if (event.type == "add_answer") {
                 this.addLocalAnswer(event.commentId, event, false)
-            } else if (event.type == "remove_answer") {
-                this.deleteLocalAnswer(event.commentId, event, false)
+            } else if (event.type == "delete_answer") {
+                this.deleteLocalAnswer(event.commentId, event.id, false)
             } else if (event.type == "update_answer") {
                 this.updateLocalAnswer(event.commentId, event.id, event.answer, false)
             }

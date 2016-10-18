@@ -93,6 +93,8 @@
 .icon-math:before { content: '\4d'; } /* '' */
 .icon-search:before { content: '\e800'; }
 .icon-clock:before { content: '\e807'; } /* '' */
+.icon-table:before { content: '\f0ce'; } /* '' */
+
 /* Fidus Writer specific */
 .icon-footnote:before { content: '\46'; } /* 'F' */
 .icon-figure:before { content: '\49'; } /* 'F' */
@@ -106,7 +108,8 @@
 .icon-access-write:before {content: '\270e'; } /* '✎' */
 .icon-access-read:before { content: '\e70a'; } /* '' */
 .icon-access-comment:before { content: '\f0e5'; } /* '' */
-
+.icon-access-read-without-comments:before { content: '\e70a'; } /* '' */
+.icon-access-review:before { content: '\f0e5'; } /* '' */
 /*
  * styles for Lato
  */

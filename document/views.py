@@ -1,11 +1,14 @@
 import time
 from django.shortcuts import render
+from django.apps import apps
 from django.shortcuts import redirect
+from django.core import serializers
 from django.http import HttpResponse, JsonResponse, HttpRequest
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import login
 from allauth.account import forms
 from django.template.context_processors import csrf
+from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
@@ -14,12 +17,14 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db.models import Q
 from django.core.serializers.python import Serializer
+from django.contrib.admin.views.decorators import staff_member_required
+from django.core.paginator import Paginator, EmptyPage
 
-from avatar.util import get_primary_avatar, get_default_avatar_url
+from avatar.utils import get_primary_avatar, get_default_avatar_url
 from avatar.templatetags.avatar_tags import avatar_url
 
-from document.models import Document, AccessRight, DocumentRevision
-from django.views.decorators.csrf import csrf_exempt
+from document.models import Document, AccessRight, DocumentRevision, \
+    ExportTemplate
 
 
 class SimpleSerializer(Serializer):
@@ -52,6 +57,7 @@ def get_accessrights(ars):
 @login_required
 def index(request):
     response = {}
+    response['export_templates'] = ExportTemplate.objects.all()
     response.update(csrf(request))
     return render(request, 'document/index.html',
                   response)
@@ -171,29 +177,21 @@ def create_user(request, user_data):
         user = signup_form.save(request)
         return user
     except:
-        return false
-
-
-from django.apps import apps
+        return False
 
 
 def login_user(request, u_name, u_pass):
     from django.contrib.auth import authenticate
     try:
         user = User.objects.get(username=u_name)
-        if (user and user.is_active and apps.is_installed('django.contrib.sessions')):
+        if (user and user.is_active and apps.is_installed(
+              'django.contrib.sessions')):
             user = authenticate(username=u_name, password=u_pass)
             login(request, user)
-            print (user)
             return user
         else:
             return False
-        # if request.user.is_authenticated():
-        #  logout(request)
-        # user = authenticate(username=u_name, password=u_pass)
-        # if user is not None:
-        #    login(request, user)
-        # return user
+
     except ObjectDoesNotExist:
         return False
 
@@ -201,27 +199,26 @@ def login_user(request, u_name, u_pass):
 def get_reviewer_for_post(request):
     email = request.POST.get('email')
     u_name = request.POST.get('user_name')
-    print (u_name)
-    print (email)
     try:
         reviewers = User.objects.filter(email=email)
         if len(reviewers) > 0:
             reviewer = reviewers[0]
         else:
             # "reviewer with this email does not exist so create it"
-            u_data = make_user_data(u_name, 'ojspass', email)
+            u_data = make_user_data(
+                u_name,
+                settings.SERVER_INFO['OJS_PASSWORD'],
+                email)
             reviewer = create_user(request, u_data)
             reviewers = User.objects.filter(email=email)
             reviewer = reviewers[0]
-            # print (email)
-            # print (reviewers)
         return reviewer
     except ObjectDoesNotExist:
         print ("could not create user for email " + email)
 
 
 def get_existing_reviewer(request):
-    reviewer = User.objects.get(email=request.POST.get('email', "0"))
+    reviewer = User.objects.get(email=request.POST.get('email'))
     return reviewer
 
 
@@ -231,7 +228,8 @@ def reviewer_js(request):
     if request.method == 'POST':
         doc_id = int(request.POST.get('doc_id', "0"))
         if doc_id == 0:
-            response['error'] = 'doc_id with value: ' + str(doc_id) + ' does not exist'
+            response['error'] = 'doc_id with value: ' + str(doc_id) \
+              + ' does not exist'
             status = 404
             return JsonResponse(response, status=status)
         reviewer = get_reviewer_for_post(request)
@@ -246,7 +244,9 @@ def reviewer_js(request):
                 response['reviewer_id'] = reviewer.id
             else:
                 response['email'] = request.POST.get('email')
-                response['msg'] = 'User has already comment access right on the document'
+                response[
+                    'msg'
+                ] = 'User has already comment access right on the document'
                 response['reviewer_id'] = reviewer.id
             response['document_id'] = str(doc_id)
             status = 200
@@ -268,11 +268,12 @@ def reviewer_js(request):
 def del_reviewer_js(request):
     response = {}
     if request.method == 'POST':
-        u_name = request.POST.get('user_name')
+        # u_name = request.POST.get('user_name')
         try:
             doc_id = int(request.POST.get('doc_id', "0"))
             if doc_id == 0:
-                response['msg'] = 'doc_id with value: ' + str(doc_id) + ' does not exist'
+                response['msg'] = 'doc_id with value: ' \
+                  + str(doc_id) + ' does not exist'
                 status = 500
                 return JsonResponse(response, status=status)
             reviewer = get_existing_reviewer(request)
@@ -280,8 +281,7 @@ def del_reviewer_js(request):
                 access_right = AccessRight.objects.get(
                     document_id=doc_id, user_id=reviewer.id)
                 if access_right.rights == 'comment':
-                    access_right.rights = ''
-                    access_right.save()
+                    access_right.delete()
                     status = 200
                     response['msg'] = 'user updated and comment rights removed'
                     response['document_id'] = str(doc_id)
@@ -301,19 +301,25 @@ def document_review_js(request):
     if request.method == 'POST':
         doc_id = int(request.POST.get('doc_id', "0"))
         app_key = request.POST.get('key')
-        email = request.POST.get('email')
+        # email = request.POST.get('email')
         u_name = request.POST.get('user_name')
         response = {}
-        if (app_key == "d5PW586jwefjn!3fv"):
-            reviewer = login_user(request, u_name, 'ojspass')
+        if (app_key == settings.SERVER_INFO['OJS_KEY']):
+            reviewer = login_user(
+                request,
+                u_name,
+                settings.SERVER_INFO['OJS_PASSWORD'])
             if reviewer is not None:
-                return redirect('/document/' + str(doc_id) + '/', permanent=True)
+                return redirect(
+                    '/document/' + str(doc_id) + '/', permanent=True
+                )
             else:
                 response['error'] = "The reviewer is not valid"
                 status = 404
                 return JsonResponse(response, status=status)
         else:
-            response['error'] = "Reviewing the document is not defined for this reviewer"
+            response['error'] = \
+              "Reviewing the document is not defined for this reviewer"
             status = 404
             return JsonResponse(response, status=status)
 
@@ -321,6 +327,7 @@ def document_review_js(request):
 @login_required
 def editor(request):
     response = {}
+    response['export_templates'] = ExportTemplate.objects.all()
     return render(request, 'document/editor.html',
                   response)
 
@@ -465,7 +472,7 @@ def submit_right_js(request):
         tgt_users = request.POST.getlist('collaborators[]')
         doc_id = int(tgt_doc)
         document = Document.objects.get(id=doc_id)
-        tgt_right = 'readNoC'
+        tgt_right = 'read-without-comments'
         try:
             the_user = User.objects.filter(is_superuser=1)
             if len(the_user) > 0:
@@ -534,7 +541,8 @@ def upload_js(request):
                 access_rights = AccessRight.objects.filter(
                     document=document, user=request.user)
                 if len(access_rights) > 0 and access_rights[
-                    0].rights == 'write':
+                    0
+                ].rights == 'write':
                     can_save = True
         if can_save:
             status = 201
@@ -623,6 +631,70 @@ def delete_revision_js(request):
             if document.owner == request.user:
                 status = 200
                 revision.delete()
+    return JsonResponse(
+        response,
+        status=status
+    )
+
+
+# For upgrading old docs and to merge outstanding diffs.
+@staff_member_required
+def maintenance(request):
+    response = {}
+    return render(request, 'document/maintenance.html', response)
+
+
+@staff_member_required
+def get_all_docs_js(request):
+    response = {}
+    status = 405
+    if request.is_ajax() and request.method == 'POST':
+        status = 200
+        doc_list = Document.objects.all()
+        paginator = Paginator(doc_list, 10)  # Get 10 docs per page
+
+        batch = request.POST['batch']
+        try:
+            response['docs'] = serializers.serialize(
+                'json',
+                paginator.page(batch)
+            )
+        except EmptyPage:
+            response['docs'] = "[]"
+    return JsonResponse(
+        response,
+        status=status
+    )
+
+
+@staff_member_required
+def save_doc_js(request):
+    response = {}
+    status = 405
+    if request.is_ajax() and request.method == 'POST':
+        status = 200
+        doc_id = request.POST['id']
+        doc = Document.objects.get(pk=int(doc_id))
+        # Only looking at fields that may have changed.
+        contents = request.POST.get('contents', False)
+        metadata = request.POST.get('metadata', False)
+        settings = request.POST.get('settings', False)
+        last_diffs = request.POST.get('last_diffs', False)
+        diff_version = request.POST.get('diff_version', False)
+        version = request.POST.get('version', False)
+        if contents:
+            doc.contents = contents
+        if metadata:
+            doc.metadata = metadata
+        if settings:
+            doc.settings = settings
+        if version:
+            doc.version = version
+        if last_diffs:
+            doc.last_diffs = last_diffs
+        if diff_version:
+            doc.diff_version = diff_version
+        doc.save()
     return JsonResponse(
         response,
         status=status

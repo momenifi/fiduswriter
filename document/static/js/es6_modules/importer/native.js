@@ -1,4 +1,4 @@
-import {obj2Node,node2Obj} from "../exporter/json"
+import {obj2Node,node2Obj} from "../exporter/tools/json"
 import {BibEntryTypes} from "../bibliography/statics"
 import {addAlert, csrfToken} from "../common/common"
 
@@ -361,12 +361,12 @@ export class ImportNative {
                 xhr.setRequestHeader("X-CSRFToken", csrfToken)
             },
             success: function(data, textStatus, jqXHR) {
-                let aDocumentValues = {
-                    last_diffs: [],
+                let docInfo = {
+                    unapplied_diffs: [],
                     is_owner: true,
                     rights: 'write',
                     changed: false,
-                    titleChanged: false
+                    title_changed: false
                 }
                 that.aDocument.owner = {
                     id: that.user.id,
@@ -381,8 +381,8 @@ export class ImportNative {
                 that.aDocument.revisions = []
                 that.aDocument.rights = "write"
                 return that.callback(true, {
-                    aDocument: that.aDocument,
-                    aDocumentValues,
+                    doc: that.aDocument,
+                    docInfo,
                     newBibEntries: that.newBibEntries
                 })
             },

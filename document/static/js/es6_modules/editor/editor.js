@@ -3,10 +3,7 @@ import * as objectHash from "object-hash/dist/object_hash"
 /* Functions for ProseMirror integration.*/
 import {ProseMirror} from "prosemirror/dist/edit/main"
 import {collabEditing} from "prosemirror/dist/collab"
-//import "prosemirror/dist/menu/menubar"
-import {defaultDocumentStyle} from "../style/documentstyle-list"
-import {defaultCitationStyle} from "../style/citation-definitions"
-import {fidusSchema} from "./schema"
+import {docSchema} from "../schema/document"
 import {ModComments} from "./comments/mod"
 import {ModFootnotes} from "./footnotes/mod"
 import {ModCitations} from "./citations/mod"
@@ -15,13 +12,16 @@ import {ModTools} from "./tools/mod"
 import {ModSettings} from "./settings/mod"
 import {ModMenus} from "./menus/mod"
 import {ModServerCommunications} from "./server-communications"
-import {editorToModel, modelToEditor} from "./node-convert"
+import {editorToModel, modelToEditor, updateDoc, setDocDefaults} from "../schema/convert"
 import {BibliographyDB} from "../bibliography/database"
 import {ImageDB} from "../images/database"
 import {Paste} from "./paste/paste"
-
+import {defaultDocumentStyle} from "../style/documentstyle-list"
+import {defaultCitationStyle} from "../style/citation-definitions"
 
 export const COMMENT_ONLY_ROLES = ['edit', 'review', 'comment']
+export const READ_ONLY_ROLES = ['read', 'read-without-comments']
+
 
 export class Editor {
     // A class that contains everything that happens on the editor page.
@@ -36,13 +36,12 @@ export class Editor {
 
         this.docInfo = {
             rights: '',
-            last_diffs: [],
+            unapplied_diffs: [],
             is_owner: false,
-            is_new: false,
-            titleChanged: false,
+            title_changed: false,
             changed: false,
         }
-        this.schema = fidusSchema
+        this.schema = docSchema
         this.doc = {
             // Initially we only have the id.
             id
@@ -85,21 +84,31 @@ export class Editor {
         let that = this
         // Set Auto-save to send the document every two minutes, if it has changed.
         this.sendDocumentTimer = window.setInterval(function() {
-            if (that.docInfo && that.docInfo.changed && that.docInfo.rights !== 'read') {
+            if (that.docInfo && that.docInfo.changed &&
+                READ_ONLY_ROLES.indexOf(that.docInfo.rights) === -1) {
                 that.save()
             }
         }, 120000)
 
         // Set Auto-save to send the title every 5 seconds, if it has changed.
         this.sendDocumentTitleTimer = window.setInterval(function() {
-            if (that.docInfo && that.docInfo.titleChanged && that.docInfo.rights !== 'read') {
-                that.docInfo.titleChanged = false
+            if (that.docInfo && that.docInfo.title_changed &&
+                READ_ONLY_ROLES.indexOf(that.docInfo.rights) === -1) {
+                that.docInfo.title_changed = false
                 that.mod.serverCommunications.send({
                     type: 'update_title',
                     title: that.doc.title
                 })
             }
         }, 10000)
+
+        // Auto save the document when the user leaves the page.
+        window.addEventListener("beforeunload", function (event) {
+            if (that.docInfo && that.docInfo.changed &&
+                READ_ONLY_ROLES.indexOf(that.docInfo.rights) === -1) {
+                that.save()
+            }
+        })
     }
 
     makeEditor() {
@@ -126,24 +135,49 @@ export class Editor {
         this.pm.on.setDoc.add(this.pm.mod.collab.afterSetDoc)
     }
 
+    // Removes all content from the editor and adds the contents of this.doc.
     update() {
-        console.log('Updating editor')
+        // Updating editor
         let that = this
         this.mod.collab.docChanges.cancelCurrentlyCheckingVersion()
         this.mod.collab.docChanges.unconfirmedSteps = {}
         if (this.mod.collab.docChanges.awaitingDiffResponse) {
             this.mod.collab.docChanges.enableDiffSending()
         }
-        let pmDoc = modelToEditor(this.doc, this.schema)
-        //collabEditing.detach(this.pm)
+        let pmDoc = modelToEditor(this.doc)
         this.pm.setDoc(pmDoc)
-        that.pm.mod.collab.version = this.doc.version
-        //collabEditing.config({version: this.doc.version}).attach(this.pm)
-        while (this.docInfo.last_diffs.length > 0) {
-            let diff = this.docInfo.last_diffs.shift()
-            this.mod.collab.docChanges.applyDiff(diff)
+        this.pm.mod.collab.version = this.doc.version
+
+
+        if (this.docInfo.unapplied_diffs.length > 0) {
+            // We have unapplied diffs -- this hsould only happen if the last disconnect
+            // happened before we could save. We try to apply the diffs and then save
+            // immediately.
+            try {
+                // We only try because this fails if the PM diff format has changed
+                // again.
+                while (this.docInfo.unapplied_diffs.length > 0) {
+                    let diff = this.docInfo.unapplied_diffs.shift()
+                    this.mod.collab.docChanges.applyDiff(diff)
+                }
+            } catch (error) {
+                // We couldn't apply the diffs. They are likely corrupted.
+                // We set the original document, increase the version by one and
+                // save to the server.
+                this.pm.setDoc(pmDoc)
+                console.warn('Diffs could not be applied correctly!')
+                this.pm.mod.collab.version = this.doc.version + this.docInfo.unapplied_diffs.length + 1
+                this.docInfo.unapplied_diffs = []
+            }
+            this.save()
         }
-        this.doc.hash = this.getHash()
+
+        // Applying diffs through the receiving mechanism has also added all the
+        // footnotes from diffs to list of footnotes without adding them to the
+        // footnote editor. We therefore need to remove all markers so that they
+        // will be found when footnotes are rendered.
+        this.mod.footnotes.markers.removeAllMarkers()
+        this.docInfo.hash = this.getHash()
         this.mod.comments.store.setVersion(this.doc.comment_version)
         this.pm.mod.collab.mustSend.add(function() {
             that.mod.collab.docChanges.sendToCollaborators()
@@ -218,7 +252,7 @@ export class Editor {
 
     enableUI() {
 
-        jQuery('.savecopy, .saverevision, .download, .latex, .epub, .html, .print, .style, \
+        jQuery('.savecopy, .saverevision, .download, .template-export, .latex, .epub, .html, .print, .style, \
       .citationstyle, .tools-item, .papersize, .metadata-menu-item, \
       #open-close-header').removeClass('disabled')
 
@@ -233,7 +267,7 @@ export class Editor {
         this.mod.settings.layout.layoutMetadata()
 
 
-        if (this.docInfo.rights === 'read') {
+        if (READ_ONLY_ROLES.indexOf(this.docInfo.rights) > -1) {
             jQuery('#editor-navigation').hide()
             jQuery('.metadata-menu-item, #open-close-header, .save, \
           .multibuttonsCover, .papersize-menu, .metadata-menu, \
@@ -241,7 +275,7 @@ export class Editor {
         } else {
             jQuery('#editor-navigation').show()
             jQuery('.metadata-menu-item, #open-close-header, .save, \
-          .multibuttonsCover, .papersize-menu, .metadata-menu, \
+          .papersize-menu, .metadata-menu, \
           .documentstyle-menu, .citationstyle-menu').removeClass('disabled')
             if (this.docInfo.is_owner) {
                 // bind the share dialog to the button if the user is the document owner
@@ -254,7 +288,7 @@ export class Editor {
             }
             else {
                 jQuery('.metadata-menu-item, #open-close-header, .save, \
-              .multibuttonsCover, .papersize-menu, .metadata-menu, \
+              .papersize-menu, .metadata-menu, \
               .documentstyle-menu, .citationstyle-menu').removeClass('disabled')
             }
         }
@@ -262,7 +296,7 @@ export class Editor {
 
     receiveDocument(data) {
         let that = this
-        this.receiveDocumentValues(data.document, data.document_values)
+        this.updateData(data.doc, data.doc_info)
         if (data.hasOwnProperty('user')) {
             this.user = data.user
         } else {
@@ -276,37 +310,23 @@ export class Editor {
         })
     }
 
-    receiveDocumentValues(dataDoc, dataDocInfo) {
+    updateData(doc, docInfo) {
         let that = this
-        this.doc = dataDoc
-        this.docInfo = dataDocInfo
+        this.doc = updateDoc(doc)
+        this.docInfo = docInfo
         this.docInfo.changed = false
-        this.docInfo.titleChanged = false
-
-        let defaultSettings = [
-            ['papersize', 1117],
-            ['citationstyle', defaultCitationStyle],
-            ['documentstyle', defaultDocumentStyle]
-        ]
+        this.docInfo.title_changed = false
 
 
-        defaultSettings.forEach(function(variable) {
-            if (that.doc.settings[variable[0]] === undefined) {
-                that.doc.settings[variable[0]] = variable[1]
-            }
-        })
-
-
-        if (this.docInfo.is_new) {
+        if (this.doc.version === 0) {
             // If the document is new, change the url. Then forget that the document is new.
-            window.history.replaceState("", "", "/document/" + this.doc.id +
-                "/");
-            delete this.docInfo.is_new
+            window.history.replaceState("", "", `/document/${this.doc.id}/`)
+            setDocDefaults(this.doc)
+
         }
     }
 
     updateComments(comments, comment_version) {
-        console.log('receiving comment update')
         this.mod.comments.store.receive(comments, comment_version)
     }
 
@@ -345,7 +365,7 @@ export class Editor {
         this.doc.metadata = tmpDoc.metadata
         this.doc.title = this.pm.mod.collab.versionDoc.firstChild.textContent
         this.doc.version = this.pm.mod.collab.version
-        this.doc.hash = this.getHash()
+        this.docInfo.hash = this.getHash()
         this.doc.comments = this.mod.comments.store.comments
         if (callback) {
             callback()
@@ -354,17 +374,18 @@ export class Editor {
 
     // Send changes to the document to the server
     sendDocumentUpdate(callback) {
-        let documentData = {
+        let doc = {
             title: this.doc.title,
             metadata: this.doc.metadata,
+            settings: this.doc.settings,
             contents: this.doc.contents,
             version: this.doc.version,
-            hash: this.doc.hash
         }
 
         this.mod.serverCommunications.send({
-            type: 'update_document',
-            document: documentData
+            type: 'update_doc',
+            doc,
+            hash: this.docInfo.hash
         })
 
         this.docInfo.changed = false
@@ -379,7 +400,7 @@ export class Editor {
     onFilterTransform(transform) {
         let prohibited = false
 
-        if (this.docInfo.rights === 'read') {
+        if (READ_ONLY_ROLES.indexOf(this.docInfo.rights) > -1) {
             // User only has read access. Don't allow anything.
             prohibited = true
         } else if (COMMENT_ONLY_ROLES.indexOf(this.docInfo.rights) > -1) {
@@ -438,7 +459,7 @@ export class Editor {
             if (documentTitle.substring(0, 255) !== this.doc.title) {
                 this.doc.title = documentTitle.substring(0, 255)
                 if (local) {
-                    this.docInfo.titleChanged = true
+                    this.docInfo.title_changed = true
                 }
             }
         }
