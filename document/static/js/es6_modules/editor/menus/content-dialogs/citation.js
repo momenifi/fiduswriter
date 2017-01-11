@@ -54,9 +54,11 @@ export let citationDialog = function (mod) {
             return true
         }
         let nodeType = editor.currentPm.schema.nodes['citation']
+
         editor.currentPm.tr.replaceSelection(
             nodeType.createAndFill({format, references})
         ).apply()
+
         return true
     }
 
