@@ -1,5 +1,6 @@
-import {searchTemplate,sowidaraTemplate,configureCitationTemplate, citationItemTemplate, selectedCitationTemplate} from "./templates"
-import {nameToText} from "../../../bibliography/tools"
+import {searchTemplate,sowidaraTemplate, citationItemTemplate, selectedCitationTemplate} from "./templates"
+//import {nameToText} from "../../../bibliography/tools"
+import {nameToText, litToText} from "../../../bibliography/tools"
 /**
  * Class to search in dara and sowiport
  */
@@ -10,12 +11,14 @@ export class SearchDialog {
         this.fields = {}
     }
 
+
     dialog(mod) {
 
 	    let that = this
         let search = searchTemplate()
         jQuery('#search-box-container').append(search)
-        jQuery('#search').bind('click', function() {
+        jQuery('#search').bind('click', function(e) {
+            e.preventDefault();
             jQuery.ajax({
                 data: {'wt':'json', 'q':jQuery("#text-search").val()},
                 dataType: "jsonp",
@@ -29,31 +32,58 @@ export class SearchDialog {
                             console.log(list.docs[0])
                             jQuery('.citing').bind('click', function() {
                 				var id = jQuery(this).parent().find("a.title").attr('id')
-                				var itemTitle = jQuery(this).parent().find("a.title").attr('itemTitle')
-				                var author    = jQuery(this).parent().find("a.title").attr('itemAuthor')
-    				            //var bibPage      = jQuery(this).parent().find("a.title").attr('itemPage')
-				                var date      = jQuery(this).parent().find("a.title").attr('itemDate')
+                                var result = that.getByValue(list.docs, id)
+                				var itemTitle = result.title_full
 
-				                alert(author)
+				                var author    = jQuery(this).parent().find("a.title").attr('itemAuthor')
+
+    				            //var bibPage      = jQuery(this).parent().find("a.title").attr('itemPage')
+				                var date      = result.publishDate_date//jQuery(this).parent().find("a.title").attr('itemDate')
 				                let bib_type = 'article'
 
-				                var bibFormat = 'autocite'//jQuery('#citation-style-label').data('style')
-        			            var bibEntry = id
-        			            var bibPage = ''
-        			            var bibBefore = ''
+				                var bibFormat = "autocite"//jQuery('#citation-style-label').data('style')
+
+        			            //var bibPage = "19"
+        			            //var bibBefore = "See for example" // Or something like: "See for example"
 
     			            	let editor = mod.editor
                     			let nodeType = editor.currentPm.schema.nodes['citation']
 
+					            that.save((id), bib_type, author,date, editor, itemTitle)
+
+                                //console.log(editor.bibDB.getDB(this.callback))
+                                let bibEntry =  editor.bibDB.getID()//"45"// pk value from backend
+                                alert((bibEntry))
+
                                 editor.currentPm.tr.replaceSelection(nodeType.createAndFill({
                                     format: bibFormat,
-                                    references: [{id: parseInt(bibEntry), prefix: bibBefore, locator: bibPage}]
+                                    references: [{id: (bibEntry)}]
                                 })).apply()
-
-					            that.save(parseInt(bibEntry), bib_type, author,date, editor)
                             })
-                        }
+                        },
+                complete:function(){
+                    //console.log("here1")
+                    /*jQuery.ajax({
+                        url: 'http://sowiport.gesis.org/Record/gesis-solis-00625037/Export?style=BibTeX',
+                        type: 'GET',
+                        dataType: 'json',
+                        success: function (response, textStatus, jqXHR) {
+                                        console.log("success")
+                        },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            console.log("readyState: " + jqXHR.readyState);
+                            //console.log("responseText: "+ jqXHR.responseText);
+                            console.log("status: " +jqXHR.status);
+                            //console.log("text status: " + textStatus);
+
+                            console.log('error', jqXHR.responseText)
+                        },
+
+                    });*/
+                    //console.log("here2")
+                },
                     })
+
         })
     }
 
@@ -65,15 +95,18 @@ export class SearchDialog {
         let Id = itemId===false ? 0 : itemId
         let returnObj = {
                 bib_type: bib_type,
+
                 entry_cat:  [],
                 entry_key: entry_key, // is never updated.
                 fields: {}
 
             }
 
-        returnObj['fields']['author'] = author
+        returnObj['fields']['author'] =  [{"family":[{"type":"text","text":author}],"given":[{"type":"text","text":author}]}]
         returnObj['fields']['date'] = date
-        returnObj['fields']['Title'] = itemTitle
+        returnObj['fields']['title'] =  [{type: 'text', text: itemTitle}]//litToText(itemTitle)
+        returnObj['fields']['journaltitle'] =  [{type: 'text', text: "journaltitle"}]
+
         let saveObj = {}
         saveObj[Id] = returnObj
 
@@ -81,8 +114,7 @@ export class SearchDialog {
             this.createEntryKey(saveObj[itemId],author,date)
         }
 
-
-        editor.bibDB.saveBibEntries(
+         editor.bibDB.saveBibEntries(
             saveObj,
             isNew,
             this.callback
@@ -117,9 +149,39 @@ export class SearchDialog {
         txt= txt.toLowerCase();
         let number = 0
         return txt.split('').map(function(c){
-         number = number + parseInt('abcdefghijklmnopqrstuvwxyz'.indexOf(c))
-         return number;
+         number = parseInt(number) + parseInt('abcdefghijklmnopqrstuvwxyz'.indexOf(c))
+         return parseInt(number);
     });
+    }
+
+
+    obj_values(object) {
+      var results = [];
+      for (var property in object)
+        results.push(object[property]);
+      return results;
+    }
+
+    list_sum( list ){
+      return list.reduce(function(previousValue, currentValue, index, array){
+          return previousValue + currentValue;
+      });
+    }
+
+    object_values_sum( obj ){
+      let that = this
+      return that.list_sum(that.obj_values(obj));
+    }
+
+
+    getByValue(arr, value) {
+
+      for (var i=0, iLen=arr.length; i<iLen; i++) {
+
+        if (arr[i].id == value){
+
+         return arr[i];}
+      }
     }
 
 
