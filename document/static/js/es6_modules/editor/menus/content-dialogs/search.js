@@ -49,16 +49,23 @@ export class SearchDialog {
     			            	let editor = mod.editor
                     			let nodeType = editor.currentPm.schema.nodes['citation']
 
-					            that.save((id), bib_type, author,date, editor, itemTitle)
+					            that.save((id), bib_type, author,date, editor, itemTitle).then(
+                                    ids => {
+                                        let references = []
+                                        ids.forEach(id => references.push({id}))
+
+                                        editor.currentPm.tr.replaceSelection(nodeType.createAndFill({
+                                            format: bibFormat,
+                                            references
+                                        })).apply()
+                                    }
+                                )
 
                                 //console.log(editor.bibDB.getDB(this.callback))
-                                let bibEntry =  editor.bibDB.getID()//"45"// pk value from backend
-                                alert((bibEntry))
+                                //let bibEntry =  editor.bibDB.getID()//"45"// pk value from backend
+                                //alert((bibEntry))
 
-                                editor.currentPm.tr.replaceSelection(nodeType.createAndFill({
-                                    format: bibFormat,
-                                    references: [{id: (bibEntry)}]
-                                })).apply()
+
                             })
                         },
                 complete:function(){
@@ -114,10 +121,9 @@ export class SearchDialog {
             this.createEntryKey(saveObj[itemId],author,date)
         }
 
-         editor.bibDB.saveBibEntries(
+        return editor.bibDB.saveBibEntries(
             saveObj,
-            isNew,
-            this.callback
+            isNew
         )
 
     }
